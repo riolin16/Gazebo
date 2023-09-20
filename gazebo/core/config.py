@@ -11,7 +11,7 @@ class BaseConfig:
     SECRET_KEY = config('SECRET_KEY')
     DATABASE_URL = config('DATABASE_URL')
 
-    BASE_DIR = Path(config('GAZEBO_HOME', default=os.path.dirname(os.getcwd())))
+    BASE_DIR = Path(config('GAZEBO_ROOT', default=os.path.dirname(os.getcwd())))
     FIREBASE_CREDENTIALS_PATH = Path(config('FIREBASE_CREDENTIALS_PATH'))
     FIREBASE_API_KEY = config('FIREBASE_API_KEY')
 
