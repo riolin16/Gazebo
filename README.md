@@ -1,8 +1,21 @@
-Install required dependencies:
+## Prerequisites
+- Python 3.11 or higher
+- PostgreSQL 15
+
+## Install Dependencies
+Use pip to install the required packages:
 ```pip install -r requirements.txt```
 
-Using SQLAlchemy with Alembic for migrations:
-1. Generate migration scripts using: ```alembic revision --autogenerate -m "describe_changes"```
-2. Run migrations to create tables: ```alembic upgrade head```
+## Initialise Database (First-time Setup)
+Navigate to the Gazebo/scripts directory and run the init_db.py script:
+```python init_db.py```
 
-Start uvicorn server by: ```uvicorn gazebo.main:app --reload```
+## Database Migrations using SQLAlchemy and Alembic
+1. Generate Migration Scripts:
+  ```alembic revision --autogenerate -m "describe_changes"```
+2. Run Migrations:
+  ```alembic upgrade head```
+
+## Starting the Application
+Start the application using the uvicorn server. Make sure you're in the project root directory:
+```uvicorn gazebo.main:app --reload```
