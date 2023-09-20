@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel, constr, Field
 
@@ -14,15 +14,19 @@ class UserCreate(UserBase):
 
 
 class UserRead(UserBase):
-    uid: str = Field(readOnly=True)
-    team_id: Optional[int] = Field(readOnly=True)
+    id: str
+    team_id: Optional[List[int]] = []
 
 
 class UserUpdate(UserBase):
-    uid: Optional[str]
+    id: str
+    username: Optional[str]
     email: Optional[str]
     password: Optional[str]
-    team_id: Optional[int]
+
+
+class UserDelete(BaseModel):
+    id: str
 
 
 class UserLogin(BaseModel):
@@ -30,5 +34,5 @@ class UserLogin(BaseModel):
 
 
 class UserAuthenticate(BaseModel):
-    username: str
+    email: str
     password: str

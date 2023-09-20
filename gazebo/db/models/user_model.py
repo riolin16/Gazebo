@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, inspect, Integer, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 from gazebo.db.models import Base
 
@@ -7,11 +7,10 @@ from gazebo.db.models import Base
 class User(Base):
     __tablename__ = 'users'
 
-    uid = Column(String(50), primary_key=True, index=True)  # also Firebase UID
+    id = Column(String(50), primary_key=True, index=True)
     username = Column(String, unique=True, nullable=False, index=True)
 
-    team_id = Column(Integer, ForeignKey('teams.id'), index=True)
-    team = relationship('Team', backref='users')
+    user_team = relationship('UserTeam', back_populates='user', cascade='all, delete-orphan')
 
     def to_dict(self) -> dict:
         return {c.key: getattr(self, c.key) for c in inspect(self).mapper.column_attrs}

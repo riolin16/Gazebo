@@ -9,6 +9,7 @@ from sqlalchemy.exc import OperationalError
 from starlette.responses import JSONResponse
 
 from gazebo.api.auth_endpoints import auth_router
+from gazebo.api.team_endpoints import team_router
 from gazebo.api.user_endpoints import user_router
 from gazebo.core.logging import LoggingConfig
 from gazebo.db.database import get_db
@@ -22,6 +23,7 @@ firebase_service.init_firebase()
 app = FastAPI(docs_url='/')
 app.include_router(user_router, prefix='/users', tags=['users'])
 app.include_router(auth_router, prefix='/auth', tags=['authentication'])
+app.include_router(team_router, prefix='/teams', tags=['teams'])
 
 
 @app.exception_handler(OperationalError)

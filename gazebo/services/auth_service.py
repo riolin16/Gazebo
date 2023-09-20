@@ -3,16 +3,22 @@ from typing import Optional
 from fastapi.logger import logger
 from firebase_admin import auth
 from firebase_admin.auth import ExpiredIdTokenError, RevokedIdTokenError, InvalidIdTokenError, UserRecord
-
 from gazebo.core.config import CurrentConfig
-from gazebo.db.schemas.user_schema import UserCreate, UserLogin
+from gazebo.db.schemas.user_schema import UserCreate, UserLogin, UserAuthenticate
 
 
 class AuthService:
     @staticmethod
     def register_firebase_user(user: UserCreate) -> str:
-        firebase_user = auth.create_user(email=user.email, password=user.password)
-        return firebase_user.uid
+        try:
+            firebase_user = AuthService.get_user_by_email(user.email)
+
+            if not firebase_user:
+                firebase_user = auth.create_user(email=user.email, password=user.password)
+
+            return firebase_user.uid
+        except Exception as e:
+            logger.error(f'Error occurred during registering Firebase user:{str(e)}')
 
     @staticmethod
     def verify_firebase_token(token: str) -> Optional[dict]:
@@ -41,24 +47,24 @@ class AuthService:
             return None
 
     @staticmethod
-    def update_password(uid: str, new_password: str) -> Optional[bool]:
+    def update_password(user_id: str, new_password: str) -> Optional[bool]:
         try:
-            auth.update_user(uid, password=new_password)
+            auth.update_user(user_id, password=new_password)
             return True
         except Exception as e:
             raise e
 
     @staticmethod
-    def get_user_by_uid(uid: str) -> Optional[UserRecord]:
+    def get_user_by_id(user_id: str) -> Optional[UserRecord]:
         try:
-            user = auth.get_user(uid)
+            user = auth.get_user(user_id)
             return user
         except Exception:
             return None
 
     @staticmethod
-    def delete_firebase_user(uid: str) -> None:
-        auth.delete_user(uid)
+    def delete_firebase_user(user_id: str) -> None:
+        auth.delete_user(user_id)
 
     @staticmethod
     async def authenticate_user(user: UserLogin) -> Optional[str]:
@@ -66,21 +72,21 @@ class AuthService:
         if not decoded_token:
             return None
 
-        uid = decoded_token.get('uid')
-        if not uid:
+        user_id = decoded_token.get('user_id')
+        if not user_id:
             return None
-        return uid
+        return user_id
 
     @staticmethod
-    def _get_firebase_token(email: str, password: str):
+    def _get_firebase_token(user_auth: UserAuthenticate):
         import requests
 
         api_key = CurrentConfig.FIREBASE_API_KEY
         url = f'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}'
 
         payload = {
-            'email': email,
-            'password': password,
+            'email': user_auth.email,
+            'password': user_auth.password,
             'returnSecureToken': True
         }
 
