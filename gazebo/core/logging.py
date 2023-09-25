@@ -13,20 +13,39 @@ LOGGING_LEVELS = {
 
 
 class LoggingConfig:
+    APP_ENV = config('APP_ENV', default='production')
     LOG_DIR = CurrentConfig.BASE_DIR / 'logs'
     LOG_FILE = LOG_DIR / 'gazebo_backend.log'
-    LOGGING_LEVEL = LOGGING_LEVELS.get(config('APP_ENV'), logging.DEBUG)
+    LOGGING_LEVEL = LOGGING_LEVELS.get(APP_ENV, logging.WARNING)
 
     @classmethod
     def get_handlers(cls):
         handlers = ['file']
-        if config('APP_ENV') == 'development':
+        if cls.APP_ENV == 'development':
             handlers.append('console')
         return handlers
 
     @classmethod
     def get_logging_dict_config(cls):
         log_format = '%(asctime)s - %(module)s - %(levelname)s - %(message)s'
+        handlers = {
+            'file': {
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': str(cls.LOG_FILE),
+                'maxBytes': 1024 * 1024 * 10,
+                'backupCount': 10,
+                'formatter': 'default',
+                'level': cls.LOGGING_LEVEL,
+            }
+        }
+
+        if 'console' in cls.get_handlers():
+            handlers['console'] = {
+                'class': 'logging.StreamHandler',
+                'formatter': 'default',
+                'level': cls.LOGGING_LEVEL,
+            }
+
         return {
             'version': 1,
             'formatters': {
@@ -34,27 +53,7 @@ class LoggingConfig:
                     'format': log_format,
                 },
             },
-            'handlers': {
-                'file': {
-                    'class': 'logging.handlers.RotatingFileHandler',
-                    'filename': cls.LOG_FILE,
-                    'maxBytes': 1024 * 1024 * 10,
-                    'backupCount': 10,
-                    'formatter': 'default',
-                    'level': cls.LOGGING_LEVEL,
-                },
-                'console': {
-                    'class': 'logging.StreamHandler',
-                    'formatter': 'default',
-                    'level': cls.LOGGING_LEVEL,
-                },
-            },
-            'loggers': {
-                'fastapi': {
-                    'handlers': cls.get_handlers(),
-                    'level': cls.LOGGING_LEVEL,
-                },
-            },
+            'handlers': handlers,
             'root': {
                 'level': cls.LOGGING_LEVEL,
                 'handlers': cls.get_handlers(),

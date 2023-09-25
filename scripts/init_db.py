@@ -3,9 +3,6 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Tuple
-
-from decouple import config
 
 PATH_DELIMITER = ';' if os.name == 'nt' else ':'
 REQUIRED_VARS = ['PGPASSWORD']
@@ -30,9 +27,13 @@ def set_env_from_file(filename: Path, *variables: str):
 
     for key, value in env_vars.items():
         if key == 'PG_PATH':
-            os.environ['PATH'] += PATH_DELIMITER + value
+            current_path = os.environ['PATH']
+            if value not in current_path:
+                os.environ['PATH'] += PATH_DELIMITER + value
         elif key == 'GAZEBO_ROOT':
-            os.environ['PYTHONPATH'] = os.environ.get('PYTHONPATH', '') + PATH_DELIMITER + value
+            current_pythonpath = os.getenv('PYTHONPATH', '')
+            if value not in current_pythonpath:
+                os.environ['PYTHONPATH'] = current_pythonpath + PATH_DELIMITER + value
         else:
             os.environ[key] = value
 
@@ -49,13 +50,9 @@ def run_sql_command(command: str):
 
 
 def update_alembic_ini(alembic_ini_path: Path):
-    with open(alembic_ini_path, 'r') as file:
-        content = file.read()
-
+    content = alembic_ini_path.read_text()
     content = re.sub(r'sqlalchemy.url = .*', 'sqlalchemy.url = ${ALEMBIC_DATABASE_URL}', content)
-
-    with open(alembic_ini_path, 'w') as file:
-        file.write(content)
+    alembic_ini_path.write_text(content)
 
 
 def main():
@@ -74,23 +71,23 @@ def main():
     db_name = 'gazebo'
     sql_commands = [
         f"""
-            SELECT pg_terminate_backend (pg_stat_activity.pid) 
-                FROM pg_stat_activity 
-                WHERE pg_stat_activity.datname = '{db_name}' AND pid <> pg_backend_pid();
-            """,
+        SELECT pg_terminate_backend (pg_stat_activity.pid) 
+            FROM pg_stat_activity 
+            WHERE pg_stat_activity.datname = '{db_name}' AND pid <> pg_backend_pid();
+        """,
         f"""
-            DROP DATABASE IF EXISTS {db_name};
-            """,
+        DROP DATABASE IF EXISTS {db_name};
+        """,
         f"""
-            CREATE DATABASE {db_name} WITH
-                OWNER = postgres
-                ENCODING = 'UTF8'
-                LC_COLLATE = 'English_United States.1252'
-                LC_CTYPE = 'English_United States.1252'
-                TABLESPACE = pg_default
-                CONNECTION LIMIT = -1
-                IS_TEMPLATE = False;
-            """
+        CREATE DATABASE {db_name} WITH
+            OWNER = postgres
+            ENCODING = 'UTF8'
+            LC_COLLATE = 'English_United States.1252'
+            LC_CTYPE = 'English_United States.1252'
+            TABLESPACE = pg_default
+            CONNECTION LIMIT = -1
+            IS_TEMPLATE = False;
+        """
     ]
 
     for command in sql_commands:
@@ -109,7 +106,7 @@ def main():
             alembic_dir.rmdir()
 
     if alembic_ini_path.exists():
-        os.remove(alembic_ini_path)
+        alembic_ini_path.unlink()
 
     # Run alembic commands
     try:
@@ -139,7 +136,8 @@ def main():
 
     # Run alembic migrations
     try:
-        subprocess.run(['alembic', 'revision', '--autogenerate', '-m', 'initial migration'], check=True, cwd=parent_path)
+        subprocess.run(['alembic', 'revision', '--autogenerate', '-m', 'initial migration'], check=True,
+                       cwd=parent_path)
         subprocess.run(['alembic', 'upgrade', 'head'], check=True, cwd=parent_path)
     except subprocess.CalledProcessError as e:
         print(f'Error running Alembic migrations: {e}')
